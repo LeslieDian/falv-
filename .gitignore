@@ -218,3 +218,40 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ============================================================================
+# law-rag 项目专用忽略规则
+# ============================================================================
+
+# 含真实 API key 的本地配置（模板见 config.example.json）
+config.json
+
+# 自带 Python 运行时（partC，811 MB）—— 体积大且可再生，不入库
+runtime/
+.venv/
+venv/
+wheels/
+
+# 打包产物 / 日志 / 临时文件
+_pack/
+*.log
+*.err
+*.out
+_probe_*.py
+_bench*.py
+_shot_*.png
+
+# 用户上传的增量知识库（运行时自动生成）
+kb/user/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 编辑器
+.vscode/
+.idea/
+.DS_Store

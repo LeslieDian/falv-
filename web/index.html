@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>法律领域智能体 · 离线演示</title>
+<style>
+  :root{
+    --bg:#ffffff; --side:#f9f9f9; --panel:#f7f7f8; --hover:#f1f1f1;
+    --line:#e5e5e5; --line2:#ececec; --line3:#d9d9e3;
+    --ink:#0d0d0d; --ink2:#5d5d5d; --ink3:#8f8f8f;
+    --accent:#10a37f;
+    --brand:#1c3f77; --brandsoft:#eaf1fa;
+    --ok:#1e7d52; --okbg:#e8f5ee;
+    --warn:#a35a00; --warnbg:#fdf3e4;
+    --bad:#b3261e; --badbg:#fdeceb;
+    --graybg:#f0f0f0;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",
+            "PingFang SC",Roboto,"Helvetica Neue",Arial,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  input,select,textarea{font:inherit;color:inherit}
+  a{color:#0288d1}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#d8d8d8;border-radius:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ===================== 布局 ===================== */
+  .app{display:flex;height:100vh;overflow:hidden;background:var(--bg)}
+
+  /* ===================== 左侧栏 ===================== */
+  .side{width:260px;flex:none;background:var(--side);border-right:1px solid var(--line);
+        display:flex;flex-direction:column;transition:width .18s ease;overflow:hidden}
+  .side.collapsed{width:68px}
+  .side.collapsed .label,.side.collapsed .hist,.side.collapsed .side-foot .me-txt,
+  .side.collapsed .searchbox{display:none}
+  .side.collapsed .side-foot .side-item{justify-content:center}
+  .side.collapsed .side-foot .side-item .ic{margin:0}
+  .side-top{padding:12px 12px 6px;display:flex;align-items:center;gap:8px}
+  .iconbtn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;
+           color:var(--ink2);flex:none}
+  .iconbtn:hover{background:var(--hover)}
+  .iconbtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;
+               stroke-linecap:round;stroke-linejoin:round}
+  .newchat{width:100%;display:flex;align-items:center;gap:10px;padding:9px 10px;
+           border-radius:10px;color:var(--ink);font-size:14px}
+  .newchat:hover{background:var(--hover)}
+  .newchat .ic{width:20px;height:20px;flex:none;display:grid;place-items:center}
+  .newchat .ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;
+                   stroke-linecap:round;stroke-linejoin:round}
+  .searchbox{margin:2px 12px 8px}
+  .searchbox input{width:100%;padding:8px 11px;border-radius:9px;border:1px solid transparent;
+                    background:#ededed;font-size:13.5px;outline:none}
+  .searchbox input:focus{border-color:var(--line3);background:#fff}
+  .hist{flex:1;overflow-y:auto;padding:0 8px 8px}
+  .hist-item{width:100%;display:flex;align-items:center;gap:9px;padding:9px 10px;
+             border-radius:9px;color:var(--ink2);font-size:13.5px;text-align:left;
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hist-item:hover{background:var(--hover);color:var(--ink)}
+  .hist-item.on{background:#ececec;color:var(--ink)}
+  .hist-item svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;
+                 stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .hist-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis}
+  .hist-item .del{opacity:0;color:var(--ink3);font-size:16px;line-height:1;padding:0 2px}
+  .hist-item:hover .del{opacity:1}
+  .hist-item .del:hover{color:var(--bad)}
+  .hist-cap{font-size:11.5px;color:var(--ink3);padding:10px 10px 4px}
+  .side-foot{border-top:1px solid var(--line);padding:8px 8px 10px}
+  .side-item{width:100%;display:flex;align-items:center;gap:10px;padding:9px 10px;
+             border-radius:10px;color:var(--ink2);font-size:13.5px}
+  .side-item:hover{background:var(--hover);color:var(--ink)}
+  .side-item .ic{width:20px;height:20px;flex:none;display:grid;place-items:center}
+  .side-item .ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;
+                     stroke-linecap:round;stroke-linejoin:round}
+  .me{display:flex;align-items:center;gap:10px;padding:8px 10px 2px}
+  .avatar{width:30px;height:30px;border-radius:50%;background:#0d0d0d;color:#fff;
+          display:grid;place-items:center;font-size:13px;flex:none}
+  .me-txt b{display:block;font-size:13px;font-weight:600}
+  .me-txt small{color:var(--ink3);font-size:11.5px}
+
+  /* ===================== 主区 ===================== */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+  .topbar{height:54px;flex:none;display:flex;align-items:center;gap:12px;padding:0 16px;
+          border-bottom:1px solid var(--line);background:rgba(255,255,255,.92);
+          backdrop-filter:blur(8px);z-index:12;overflow:hidden}
+  .topbar h1{font-size:15px;margin:0;font-weight:600;white-space:nowrap}
+  .topbar .sub{font-size:12px;color:var(--ink3);margin-left:8px;white-space:nowrap;
+                overflow:hidden;text-overflow:ellipsis}
+  .chips{margin-left:auto;display:flex;gap:7px;flex-wrap:nowrap;justify-content:flex-end;
+         overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:4px 0}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{font-size:11.5px;padding:3px 9px;border-radius:20px;background:var(--graybg);
+        color:var(--ink2);white-space:nowrap}
+  .chip.ok{background:var(--okbg);color:var(--ok)}
+  .chip.warn{background:var(--warnbg);color:var(--warn)}
+  .chip.bad{background:var(--badbg);color:var(--bad)}
+  .chip.brand{background:var(--brandsoft);color:var(--brand)}
+
+  .chat{flex:1;overflow-y:auto;scroll-behavior:smooth}
+  .inner{max-width:780px;margin:0 auto;padding:24px 20px 8px}
+
+  /* ---- 空状态 ---- */
+  .empty-state{text-align:center;padding:8vh 0 20px}
+  .empty-state h2{font-size:26px;margin:0 0 6px;font-weight:600;letter-spacing:.2px}
+  .empty-state p{color:var(--ink3);font-size:13.5px;margin:0 0 26px}
+  .ex-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;text-align:left}
+  @media(max-width:640px){.ex-cards{grid-template-columns:1fr}}
+  .ex-card{border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:#fff;
+           transition:.12s;cursor:pointer}
+  .ex-card:hover{background:var(--panel);border-color:var(--line3)}
+  .ex-card b{display:block;font-size:13.5px;font-weight:600;margin-bottom:3px}
+  .ex-card span{font-size:12.5px;color:var(--ink3);line-height:1.6;display:block}
+  .ex-more{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+
+  /* ---- 消息 ---- */
+  .turn{display:flex;gap:14px;padding:16px 0}
+  .turn+.turn{border-top:1px solid var(--line2)}
+  .turn.user{justify-content:flex-end}
+  .turn.user .body{background:#f2f2f2;border-radius:20px;padding:10px 16px;max-width:82%;
+                   white-space:pre-wrap}
+  .turn .av{width:28px;height:28px;border-radius:50%;flex:none;display:grid;place-items:center;
+            font-size:12px;font-weight:700;background:#0d0d0d;color:#fff;margin-top:2px}
+  .turn.assistant .av{background:var(--brand)}
+  .body{min-width:0;flex:1}
+  .turn.user .body{flex:0 1 auto}
+  .ans{white-space:pre-wrap;font-size:15px;line-height:1.85;word-break:break-word}
+  .ans h3,.ans h4{font-size:15.5px;margin:16px 0 6px;color:var(--ink)}
+  .ans .tblw{overflow-x:auto;margin:10px 0}
+  .ans table{border-collapse:collapse;width:100%;font-size:12.5px}
+  .ans th,.ans td{border:1px solid #dde4ec;padding:6px 9px;text-align:left;vertical-align:top;
+                  line-height:1.55}
+  .ans th{background:#f2f6fb;white-space:nowrap}
+  .ans tr:nth-child(even) td{background:#fafbfd}
+  .ans .quote{border-left:3px solid var(--line3);background:#f7f8fa;padding:8px 12px;margin:10px 0;
+              border-radius:0 6px 6px 0;color:var(--ink2);font-size:13.5px}
+  .ans hr{border:none;border-top:1px dashed #d7dee8;margin:14px 0}
+  .ans strong{font-weight:700}
+  .ans ul,.ans ol{margin:6px 0 6px 22px;padding:0}
+  .ans li{margin:3px 0}
+  .ans code{background:#f1f4f8;padding:1px 5px;border-radius:4px;font-size:12.5px}
+  .cursor{display:inline-block;width:7px;height:15px;background:var(--ink2);vertical-align:-2px;
+          animation:bl .9s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  .status-line{font-size:12.5px;color:var(--ink3);margin-bottom:8px;display:flex;gap:8px;
+               align-items:center}
+  .spin{width:11px;height:11px;border:2px solid var(--line3);border-top-color:var(--ink3);
+        border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .foot{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+  .verdict{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .v{font-size:11.5px;padding:3px 10px;border-radius:7px;font-weight:600}
+  .v.ok{background:var(--okbg);color:var(--ok)}
+  .v.warn{background:var(--warnbg);color:var(--warn)}
+  .v.bad{background:var(--badbg);color:var(--bad)}
+  .v.gray{background:var(--graybg);color:var(--ink2)}
+  .vdetail{font-size:12.5px;color:var(--ink2);line-height:1.75;width:100%;
+           background:var(--panel);border-radius:9px;padding:9px 12px}
+  .vdetail b{color:var(--ink)}
+  .meta{font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .routebar{font-size:12px;color:var(--ink2);background:var(--panel);border-radius:9px;
+            padding:7px 11px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .routebar .rt{color:var(--ink3)}
+  details.evd{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  details.evd summary{cursor:pointer;padding:9px 12px;font-size:13px;color:var(--ink2);
+                       list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+  details.evd summary::-webkit-details-marker{display:none}
+  details.evd summary::before{content:"▸";color:var(--ink3);transition:.15s}
+  details.evd[open] summary::before{transform:rotate(90deg)}
+  details.evd summary:hover{background:var(--panel)}
+  .evwrap{padding:0 12px 12px}
+  .ev{border:1px solid var(--line2);border-left:3px solid var(--brand);border-radius:8px;
+      padding:9px 12px;margin-bottom:8px;background:#fcfdff}
+  .ev .hd{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .ev .law{font-weight:700;color:var(--brand);font-size:13.5px}
+  .ev .txt{font-size:13px;color:#39485a;margin-top:5px;line-height:1.7;max-height:104px;
+           overflow:hidden;position:relative}
+  .ev .txt.open{max-height:none}
+  .ev .sc{font-size:11px;color:var(--ink3);margin-left:auto;font-variant-numeric:tabular-nums}
+  .ev.case{border-left-color:#8a6fd4}
+  .ev.mine{border-left-color:var(--ok);background:#f7fdf9}
+  .tag{font-size:11px;padding:1px 7px;border-radius:5px;background:var(--graybg);color:var(--ink2);
+       border:1px solid var(--line)}
+  .tag.civil{background:#eaf1fa;color:#1c3f77;border-color:#cddff2}
+  .tag.criminal{background:#fdeceb;color:#b3261e;border-color:#f4cdca}
+  .tag.procedural{background:#f1ecfb;color:#5b3fa8;border-color:#ddd2f5}
+  .tag.general{background:#f2f4f7;color:#5a6b7d;border-color:#dfe4ea}
+  .err{background:var(--badbg);border:1px solid #f4cdca;color:var(--bad);padding:9px 13px;
+       border-radius:9px;font-size:13px;line-height:1.6}
+  .err.warn{background:var(--warnbg);border-color:#f0dcbc;color:var(--warn)}
+
+  /* ===================== 输入区 ===================== */
+  .composerWrap{flex:none;padding:0 0 14px;background:linear-gradient(to bottom,rgba(255,255,255,0),
+                #fff 26%)}
+  .composer-in{max-width:780px;margin:0 auto;padding:0 20px}
+  .opts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:9px;padding-left:2px}
+  .opts .olbl{font-size:11.5px;color:var(--ink3)}
+  .opts select,.opts input[type=number]{padding:4px 8px;border:1px solid var(--line);
+        border-radius:8px;font-size:12.5px;background:#fff;outline:none;height:30px}
+  .opts select:focus,.opts input:focus{border-color:var(--line3)}
+  .opts input[type=number]{width:58px}
+  .chipbtn{height:30px;padding:0 11px;border-radius:8px;border:1px solid var(--line);
+           font-size:12.5px;color:var(--ink2);background:#fff}
+  .chipbtn:hover{background:var(--panel);color:var(--ink)}
+  .chipbtn:disabled{opacity:.55;cursor:not-allowed}
+  .composer{border:1px solid var(--line3);border-radius:26px;display:flex;align-items:flex-end;
+            gap:6px;padding:6px 6px 6px 8px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.05)}
+  .plusbtn{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+           color:var(--ink2);flex:none}
+  .plusbtn:hover{background:var(--hover);color:var(--ink)}
+  .plusbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;
+               stroke-linecap:round}
+  #q{flex:1;border:none;outline:none;resize:none;max-height:190px;padding:8px 4px;font-size:15px;
+     line-height:1.6;background:transparent}
+  #q::placeholder{color:var(--ink3)}
+  .send{width:34px;height:34px;border-radius:50%;background:#0d0d0d;color:#fff;flex:none;
+        display:grid;place-items:center}
+  .send:disabled{background:#c9c9c9;cursor:not-allowed}
+  .send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;
+            stroke-linecap:round;stroke-linejoin:round}
+  .hint{font-size:11.5px;color:var(--ink3);text-align:center;margin-top:9px;line-height:1.65}
+  .hint b{color:var(--ink2)}
+  .turntag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink3);
+           background:var(--panel);border-radius:20px;padding:3px 10px}
+
+  /* ===================== 开关（详细分析） ===================== */
+  .switch{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px 0 8px;
+          border:1px solid var(--line);border-radius:15px;font-size:12.5px;color:var(--ink2);
+          background:#fff;cursor:pointer;user-select:none;white-space:nowrap;flex:none}
+  .switch:hover{background:var(--panel);color:var(--ink)}
+  .switch.on{background:var(--brandsoft);border-color:#cddff2;color:var(--brand);font-weight:600}
+  .switch .track{width:28px;height:16px;border-radius:9px;background:#cfcfcf;position:relative;
+                 flex:none;transition:background .16s}
+  .switch.on .track{background:var(--brand2)}
+  .switch .knob{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;
+                background:#fff;transition:transform .16s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .switch.on .knob{transform:translateX(12px)}
+
+  /* ===================== 详细分析面板 ===================== */
+  .analysis{border:1px solid #cddff2;border-radius:12px;background:#fbfcfe;overflow:hidden;
+            margin-top:10px}
+  .analysis .ahead{padding:10px 13px;border-bottom:1px solid #e3ecf7;background:#f4f8fd;
+                   display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .analysis .ahead b{font-size:13.5px;color:var(--brand)}
+  .analysis .ahead .n{font-size:11.5px;color:var(--ink3);margin-left:auto}
+  .analysis .abody{padding:12px 13px}
+  .asum{font-size:13.5px;line-height:1.75;color:var(--ink);background:#fff;border:1px solid var(--line2);
+        border-radius:9px;padding:9px 12px;margin-bottom:12px}
+  .asum .lb{font-size:11.5px;color:var(--ink3);display:block;margin-bottom:3px}
+  .ablock{margin-bottom:14px}
+  .ablock:last-child{margin-bottom:0}
+  .ahead2{font-size:12px;color:var(--ink3);font-weight:600;margin-bottom:6px;display:flex;
+          align-items:center;gap:6px}
+  .ahead2::before{content:"";width:3px;height:11px;background:var(--brand2);border-radius:2px}
+  .alist{margin:0;padding-left:20px;font-size:13.5px;line-height:1.75}
+  .alist li{margin:3px 0}
+  .issue{border:1px solid var(--line2);border-radius:10px;background:#fff;padding:11px 13px;
+         margin-bottom:9px}
+  .issue .ititle{font-size:13.5px;font-weight:700;color:var(--brand);display:flex;gap:8px;
+                 align-items:baseline;flex-wrap:wrap}
+  .issue .ians{font-size:13px;color:var(--ink);margin:5px 0 8px;line-height:1.7}
+  .elem{border-top:1px dashed var(--line2);padding:8px 0 2px}
+  .elem .erow{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .elem .ename{font-size:13px;font-weight:600}
+  .elem .ebasis{font-size:12px;color:var(--brand2);background:var(--brandsoft);border-radius:5px;
+                padding:1px 7px}
+  .elem .estatus{font-size:11px;padding:1px 7px;border-radius:5px;border:1px solid var(--line);
+                 color:var(--ink2);background:var(--graybg)}
+  .elem .estatus.ok{background:var(--okbg);color:var(--ok);border-color:#cbe7d9}
+  .elem .estatus.bad{background:var(--badbg);color:var(--bad);border-color:#f4cdca}
+  .elem .estatus.warn{background:var(--warnbg);color:var(--warn);border-color:#f0dcbc}
+  .elem .ereason{font-size:13px;color:#39485a;line-height:1.72;margin-top:4px}
+  .issue .icounter{font-size:12.5px;color:var(--ink2);background:var(--panel);border-radius:8px;
+                   padding:7px 10px;margin-top:7px;line-height:1.7}
+  .issue .icounter b{color:var(--ink)}
+  .aconcl{font-size:13.5px;line-height:1.78;background:#f7fdf9;border:1px solid #cbe7d9;
+          border-radius:9px;padding:10px 12px;color:var(--ink)}
+  .aunc{font-size:12.5px;color:var(--ink2);line-height:1.72;margin-top:7px;background:var(--panel);
+        border-radius:8px;padding:8px 11px}
+  .aunc b{color:var(--ink)}
+  .araw{font-size:12.5px;color:var(--ink2);background:var(--panel);border-radius:9px;padding:9px 12px;
+        white-space:pre-wrap;max-height:320px;overflow:auto;line-height:1.7}
+
+  /* ===================== Top-K 相似案例（折叠） ===================== */
+  .topcases{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .topcases summary{cursor:pointer;padding:9px 12px;font-size:13px;color:var(--ink2);list-style:none;
+                    display:flex;align-items:center;gap:8px;user-select:none}
+  .topcases summary::-webkit-details-marker{display:none}
+  .topcases summary::before{content:"▸";color:var(--ink3);transition:.15s}
+  .topcases[open] summary::before{transform:rotate(90deg)}
+  .topcases summary:hover{background:var(--panel)}
+  .topcases .tcbody{padding:0 12px 12px}
+  .tc{border:1px solid var(--line2);border-left:3px solid #8a6fd4;border-radius:8px;padding:9px 12px;
+      margin-bottom:8px;background:#fdfdff}
+  .tc .tchd{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .tc .tcno{width:20px;height:20px;border-radius:50%;background:#8a6fd4;color:#fff;flex:none;
+            display:grid;place-items:center;font-size:11px;font-weight:700}
+  .tc .tctitle{font-weight:700;font-size:13.5px;color:var(--ink)}
+  .tc .tcfact{font-size:13px;color:#39485a;margin-top:5px;line-height:1.7}
+  .tc .tcans{font-size:12.5px;color:var(--ink2);margin-top:5px;padding-top:5px;
+             border-top:1px dashed var(--line2);line-height:1.7}
+  .tc .tcans b{color:var(--ink)}
+  .tc .tcsc{font-size:11px;color:var(--ink3);margin-left:auto;font-variant-numeric:tabular-nums}
+
+  /* ===================== 右侧状态抽屉 ===================== */
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:40;display:none}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:352px;background:#fff;z-index:41;
+          border-left:1px solid var(--line);transform:translateX(100%);transition:transform .2s ease;
+          display:flex;flex-direction:column}
+  .drawer.open{transform:none;box-shadow:-8px 0 30px rgba(0,0,0,.10)}
+  .drawer header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;
+                  align-items:center;gap:10px}
+  .drawer header b{font-size:14px}
+  .drawer .body{overflow-y:auto;padding:14px 16px 30px}
+  .stat-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;
+            padding:8px 0;border-bottom:1px solid var(--line2)}
+  .stat-row span{color:var(--ink2)}
+  .stat-row b{font-variant-numeric:tabular-nums}
+  .drawer h3{font-size:12px;color:var(--ink3);margin:18px 0 6px;font-weight:600}
+  .up-item{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:7px 0;
+           border-bottom:1px solid var(--line2)}
+  .up-item .t{flex:1;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .up-item .x{color:var(--bad);cursor:pointer;font-size:11.5px}
+  .empty{font-size:12.5px;color:var(--ink3);padding:10px 0}
+
+  /* ===================== 弹窗（上传知识） ===================== */
+  .modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
+         background:rgba(0,0,0,.35);padding:20px}
+  .modal.open{display:flex}
+  .mbox{background:#fff;border-radius:14px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;
+        box-shadow:0 20px 60px rgba(0,0,0,.24)}
+  .mbox header{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;
+               align-items:center;gap:10px}
+  .mbox header b{font-size:15px}
+  .mbox .content{padding:16px 20px 20px}
+  .mbox footer{padding:12px 20px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .fld{margin-bottom:11px}
+  .fld label{display:block;font-size:12px;color:var(--ink2);margin-bottom:5px}
+  .fld input,.fld select,.fld textarea{width:100%;padding:9px 11px;border:1px solid var(--line3);
+        border-radius:9px;font-size:13.5px;outline:none;background:#fff}
+  .fld textarea{min-height:96px;resize:vertical;line-height:1.6}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--ink2)}
+  .frow{display:flex;gap:10px}
+  .frow .fld{flex:1}
+  .primary{background:#0d0d0d;color:#fff;padding:9px 18px;border-radius:9px;font-size:13.5px}
+  .primary:hover{background:#2a2a2a}
+  .primary:disabled{background:#c9c9c9;cursor:not-allowed}
+  .secondary{border:1px solid var(--line3);padding:9px 16px;border-radius:9px;font-size:13.5px}
+  .secondary:hover{background:var(--panel)}
+  .upload-list{margin-top:12px;max-height:190px;overflow:auto;border-top:1px solid var(--line2);
+               padding-top:8px}
+  .sub-note{font-size:11.5px;color:var(--ink3);margin-top:10px;line-height:1.6}
+  @media(max-width:860px){
+    .side{position:fixed;left:0;top:0;z-index:31;height:100vh;box-shadow:8px 0 30px rgba(0,0,0,.14);
+          transform:translateX(-100%);transition:transform .2s ease;width:260px}
+    .side.show{transform:none}
+    .side.collapsed{width:260px}
+    .side.collapsed .label,.side.collapsed .hist,.side.collapsed .side-foot .me-txt,
+    .side.collapsed .searchbox{display:revert}
+    .side.collapsed .side-foot .side-item{justify-content:flex-start}
+    .topbar .sub{display:none}
+    .menuBtn{display:grid !important}
+  }
+  .menuBtn{display:none}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ==================== 左侧栏 ==================== -->
+  <aside class="side" id="side">
+    <div class="side-top">
+      <button class="iconbtn" id="sideToggle" title="展开 / 收起侧栏">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+    <div style="padding:0 8px 4px">
+      <button class="newchat" id="newChat">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="label">新建对话</span>
+      </button>
+    </div>
+    <div class="searchbox">
+      <input id="histSearch" placeholder="搜索对话记录">
+    </div>
+    <nav class="hist" id="hist"></nav>
+    <div class="side-foot">
+      <button class="side-item" id="btnUpload">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="label">添加知识（上传进库）</span>
+      </button>
+      <button class="side-item" id="btnStatus">
+        <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span>
+        <span class="label">运行状态</span>
+      </button>
+      <div class="me">
+        <div class="avatar">法</div>
+        <div class="me-txt">
+          <b>本地单机运行</b>
+          <small>离线知识库 + 外接大模型</small>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==================== 主区 ==================== -->
+  <main class="main">
+    <div class="topbar">
+      <button class="iconbtn menuBtn" id="menuBtn" title="菜单">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <h1>法律领域智能体</h1>
+      <span class="sub">本地知识库检索 + 外接大模型 · 单机运行</span>
+      <div class="chips" id="chips"><span class="chip">正在加载知识库…</span></div>
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="inner">
+        <div class="empty-state" id="emptyState">
+          <h2>法律领域智能体</h2>
+          <p>本地知识库检索 + 外接大模型 · 单机运行 · 断网也能演示</p>
+          <div class="ex-cards" id="exCards"></div>
+          <div class="ex-more">
+            <button class="chipbtn" id="rnd">随机抽题（14.5 万条真实案例现抽）</button>
+            <button class="chipbtn" id="clr">清空对话</button>
+          </div>
+        </div>
+        <div id="msgs"></div>
+      </div>
+    </div>
+
+    <div class="composerWrap">
+      <div class="composer-in">
+        <div class="opts">
+          <span class="olbl">法域</span>
+          <select id="dom">
+            <option value="">自动判定（L1 路由）</option>
+            <option value="civil">强制民事</option>
+            <option value="criminal">强制刑事</option>
+            <option value="procedural">强制程序</option>
+            <option value="general">强制通用</option>
+          </select>
+          <span class="olbl">法条</span>
+          <input type="number" id="np" value="8" min="1" max="20">
+          <span class="olbl">案例</span>
+          <input type="number" id="nc" value="6" min="0" max="20">
+          <span class="olbl">参考判例</span>
+          <input type="number" id="ntk" value="3" min="0" max="8" title="回答下方折叠展示的 Top-K 相似案例条数">
+          <button class="switch" id="swDetailed" title="开启后输出结构化详细分析（事实→争点→要件→结论）">
+            <span class="track"><span class="knob"></span></span>
+            <span class="swtext">详细分析</span>
+          </button>
+          <span class="turntag" id="turntag" style="display:none"></span>
+        </div>
+        <div class="composer">
+          <button class="plusbtn" id="plusBtn" title="添加知识到知识库">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <textarea id="q" rows="1" placeholder="问点什么…（Enter 发送 / Ctrl+Enter 发送）"></textarea>
+          <button class="send" id="go" title="发送">
+            <svg viewBox="0 0 24 24"><path d="M12 19V6M6 12l6-6 6 6"/></svg>
+          </button>
+        </div>
+        <div class="hint">
+          推理链路：<b>向量检索</b>（Qwen3-Embedding-0.6B，库内 21.7 万条向量）→ <b>生成</b>（外接大模型，只依据检索到的材料作答）
+          → <b>引用核验</b>（把回答里的《法名》第X条逐条比对回材料，标出疑似编造）。<br>
+          库内覆盖 <b>法条 7.2 万条（1,904 部法规）＋ 真实案例 14.5 万条</b>，检索是<b>全库范围</b>，不是抽样的示例集。
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== 右侧状态抽屉 ==================== -->
+<div class="backdrop" id="backdrop"></div>
+<aside class="drawer" id="drawer">
+  <header>
+    <b>运行状态</b>
+    <div style="margin-left:auto">
+      <button class="iconbtn" id="drawerClose" title="关闭">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+  </header>
+  <div class="body">
+    <div id="stat"><div class="empty">读取中…</div></div>
+  </div>
+</aside>
+
+<!-- ==================== 上传知识弹窗 ==================== -->
+<div class="modal" id="kbModal">
+  <div class="mbox">
+    <header>
+      <b>添加知识 · 上传入库</b>
+      <div style="margin-left:auto">
+        <button class="iconbtn" id="kbClose" title="关闭">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="content">
+      <div class="frow">
+        <div class="fld">
+          <label>类型</label>
+          <select id="uk">
+            <option value="case">案例</option>
+            <option value="statute">法条</option>
+            <option value="note">笔记 / 观点</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>法域</label>
+          <select id="ud">
+            <option value="general">通用</option>
+            <option value="civil">民事</option>
+            <option value="criminal">刑事</option>
+            <option value="procedural">程序</option>
+          </select>
+        </div>
+      </div>
+      <div class="fld">
+        <label>标题</label>
+        <input type="text" id="ut" placeholder="例如：某电商平台货损赔偿案">
+      </div>
+      <div class="frow">
+        <div class="fld">
+          <label>法名（选填）</label>
+          <input type="text" id="ul" placeholder="如 民法典">
+        </div>
+        <div class="fld" style="max-width:130px">
+          <label>条号（选填）</label>
+          <input type="text" id="ub" placeholder="如 577">
+        </div>
+      </div>
+      <div class="fld">
+        <label>正文</label>
+        <textarea id="ux" placeholder="案件事实 / 裁判要旨 / 法条全文…"></textarea>
+      </div>
+      <div class="upload-list" id="uplist"></div>
+      <div class="sub-note">
+        上传时用与建库<b>同一个</b>向量模型编码，所以新内容会和库内数据在同一空间里被检索到。
+      </div>
+    </div>
+    <footer>
+      <button class="primary" id="up">上传入库</button>
+      <span id="upmsg" style="color:var(--ink2);font-size:12.5px"></span>
+    </footer>
+  </div>
+</div>
+
+<script>
+// ==================================================================== 工具
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function md(s){
+  let t = esc(s);
+  t = t.replace(/^#### (.*)$/gm,'<h4>$1</h4>')
+       .replace(/^### (.*)$/gm,'<h4>$1</h4>')
+       .replace(/^## (.*)$/gm,'<h3>$1</h3>')
+       .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+       .replace(/`(.+?)`/g,'<code>$1</code>');
+  const lines = t.split('\n'), out = [];
+  let buf = [], mode = null, tbl = [];
+  const flush = () => { if(buf.length){ out.push('<'+(mode==='ol'?'ol':'ul')+'>'+buf.join('')+'</'+(mode==='ol'?'ol':'ul')+'>'); buf=[]; mode=null; } };
+  const flushTbl = () => {
+    if(!tbl.length) return;
+    const rows = tbl.filter(r => !/^\s*\|?[\s:|-]+\|[\s:|\-]*$/.test(r));
+    const cells = rows.map(r => r.replace(/^\s*\|/,'').replace(/\|\s*$/,'').split('|').map(c=>c.trim()));
+    tbl = [];
+    if(!cells.length) return;
+    let h = '<div class="tblw"><table><thead><tr>'
+          + cells[0].map(c=>'<th>'+c+'</th>').join('') + '</tr></thead><tbody>';
+    for(const r of cells.slice(1))
+      h += '<tr>' + r.map(c=>'<td>'+c+'</td>').join('') + '</tr>';
+    out.push(h + '</tbody></table></div>');
+  };
+  for(const ln of lines){
+    const tr = ln.trim();
+    if(tr.startsWith('|') && tr.endsWith('|') && tr.length > 2){ flush(); tbl.push(ln); continue; }
+    flushTbl();
+    let m;
+    if((m = tr.match(/^(?:&gt;|>)\s?(.*)$/)) && m[1]){
+      out.push('<p class="quote">'+m[1]+'</p>');
+    } else if(/^(?:---+|\*\*\*+)$/.test(tr)){
+      out.push('<hr>');
+    } else if((m = ln.match(/^\s*[-*]\s+(.*)$/))){
+      if(mode!=='ul'){flush();mode='ul';} buf.push('<li>'+m[1]+'</li>');
+    } else if((m = ln.match(/^\s*\d+[.、]\s+(.*)$/))){
+      if(mode!=='ol'){flush();mode='ol';} buf.push('<li>'+m[1]+'</li>');
+    } else {
+      flush(); out.push(ln);
+    }
+  }
+  flushTbl(); flush();
+  return out.join('\n');
+}
+
+async function jget(u){ const r = await fetch(u); return r.json(); }
+async function jpost(u, b){
+  const r = await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  return r.json();
+}
+function scrollBottom(){ const c = $('chat'); c.scrollTop = c.scrollHeight; }
+
+// ==================================================================== 会话（左栏历史）
+let CONVOS = [];          // [{id,title,msgs:[{role,text,html,ev,ver,route,err,meta}]}]
+let CURID = null;
+let HIST = [];            // 多轮上下文，最多最近 2 轮
+
+function curConvo(){
+  let c = CONVOS.find(x => x.id === CURID);
+  if(!c){ c = {id: Date.now(), title:'新对话', msgs:[]}; CONVOS.unshift(c); CURID = c.id; }
+  return c;
+}
+function newConvo(){
+  // 当前对话还没内容 → 直接复用，不在历史里堆一串空会话
+  const cur = CONVOS.find(x => x.id === CURID);
+  if(cur && cur.msgs.length === 0){
+    $('msgs').innerHTML = ''; $('emptyState').style.display = ''; HIST = [];
+    renderHist(); updateTurnTag(); return;
+  }
+  const c = {id: Date.now(), title:'新对话', msgs:[]};
+  CONVOS.unshift(c); CURID = c.id; HIST = [];
+  $('msgs').innerHTML = ''; $('emptyState').style.display = '';
+  renderHist(); updateTurnTag();
+}
+function rebuildHist(){
+  HIST = [];
+  const c = CONVOS.find(x => x.id === CURID);
+  if(!c) return;
+  const msgs = c.msgs;
+  for(let i = msgs.length - 1; i >= 0 && HIST.length < 4; i--){
+    const m = msgs[i];
+    if(m.role === 'assistant' && m.text) HIST.unshift({role:'assistant', content:m.text});
+    else if(m.role === 'user' && m.text) HIST.unshift({role:'user', content:m.text});
+  }
+  HIST = HIST.slice(-4);
+}
+function updateTurnTag(){
+  const c = CONVOS.find(x => x.id === CURID);
+  const n = c ? c.msgs.filter(m => m.role === 'user').length : 0;
+  const t = $('turntag');
+  if(n > 1){ t.style.display = ''; t.textContent = '多轮对话（第 ' + n + ' 轮）· 回答承接上文'; }
+  else t.style.display = 'none';
+}
+function renderHist(){
+  const q = ($('histSearch').value || '').trim().toLowerCase();
+  // 空会话不进历史列表
+  const list = CONVOS.filter(c => c.msgs.length && (!q || c.title.toLowerCase().includes(q)));
+  const el = $('hist');
+  if(!list.length){
+    el.innerHTML = '<div class="hist-cap">' + (q ? '没有匹配的对话' : '还没有对话记录') + '</div>';
+    return;
+  }
+  el.innerHTML = '<div class="hist-cap">最近</div>' + list.map(c =>
+    `<div class="hist-item ${c.id === CURID ? 'on' : ''}" data-id="${c.id}">
+       <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3.2-6.4"/><path d="M4 12h8"/></svg>
+       <span class="nm">${esc(c.title)}</span>
+       <span class="del" data-del="${c.id}" title="删除">×</span>
+     </div>`).join('');
+  [...el.querySelectorAll('.hist-item')].forEach(it => it.onclick = () => {
+    if(it.querySelector('.del').dataset.del) return;
+    CURID = +it.dataset.id; HIST = []; rebuildHist();
+    renderChat(); renderHist(); updateTurnTag();
+  });
+  [...el.querySelectorAll('.del')].forEach(d => d.onclick = e => {
+    e.stopPropagation();
+    CONVOS = CONVOS.filter(c => c.id !== +d.dataset.del);
+    if(CURID === +d.dataset.del){ CURID = null; $('msgs').innerHTML=''; $('emptyState').style.display=''; HIST=[]; }
+    renderHist(); updateTurnTag();
+  });
+}
+function renderChat(){
+  const c = CONVOS.find(x => x.id === CURID);
+  const box = $('msgs');
+  box.innerHTML = '';
+  if(!c || !c.msgs.length){ $('emptyState').style.display = ''; return; }
+  $('emptyState').style.display = 'none';
+  c.msgs.forEach(m => box.appendChild(msgNode(m)));
+  scrollBottom();
+}
+function msgNode(m){
+  const el = document.createElement('div');
+  el.className = 'turn ' + m.role;
+  if(m.role === 'user'){
+    el.innerHTML = `<div class="body">${esc(m.text)}</div>`;
+    return el;
+  }
+  el.innerHTML = `<div class="av">法</div>
+    <div class="body">
+      <div class="status-line" ${m.stage ? '' : 'style="display:none"'}></div>
+      <div class="ans"></div>
+      <div class="foot"></div>
+    </div>`;
+  const ans = el.querySelector('.ans');
+  ans.innerHTML = m.html || (m.text ? md(m.text) : '');
+  const foot = el.querySelector('.foot');
+  if(m.route) foot.appendChild(routeNode(m.route));
+  if(m.err) foot.insertAdjacentHTML('beforeend',
+    `<div class="err ${m.errLevel==='warn'?'warn':''}">${esc(m.err)}</div>`);
+  if(m.analysis) foot.appendChild(analysisNode(m.analysis));
+  if(m.ev) foot.appendChild(evidenceNode(m.ev));
+  if(m.topCases && m.topCases.length) foot.appendChild(topCasesNode(m.topCases));
+  if(m.ver) foot.insertAdjacentHTML('beforeend', verdictNode(m.ver));
+  if(m.meta) foot.insertAdjacentHTML('beforeend', `<div class="meta">${esc(m.meta)}</div>`);
+  return el;
+}
+function setStage(node, txt){
+  const sl = node.querySelector('.status-line');
+  if(!sl) return;
+  sl.style.display = txt ? '' : 'none';
+  sl.innerHTML = txt ? `<span class="spin"></span>${esc(txt)}` : '';
+}
+
+// ==================================================================== 状态
+async function loadStats(){
+  try{
+    const s = await jget('/api/stats');
+    if(!s.ok){ $('chips').innerHTML = '<span class="chip bad">知识库未就绪</span>'; return; }
+    const em = s.embedder || {};
+    const chips = [
+      `<span class="chip brand">法条 ${s.n_provisions.toLocaleString()}</span>`,
+      `<span class="chip brand">案例 ${s.n_cases.toLocaleString()}</span>`,
+      `<span class="chip">向量 ${s.n_vectors.toLocaleString()} × ${s.dim}</span>`,
+      em.available ? `<span class="chip ok">编码器 ${esc(em.device)}</span>`
+                   : `<span class="chip warn">降级：仅关键词检索</span>`,
+      s.llm && s.llm.ready ? `<span class="chip ok">生成 ${esc(s.llm.model)}</span>`
+                           : `<span class="chip warn">未配置 API key</span>`
+    ];
+    if(s.n_user) chips.push(`<span class="chip ok">自建 ${s.n_user}</span>`);
+    $('chips').innerHTML = chips.join('');
+
+    $('stat').innerHTML = `
+      <div class="stat-row"><span>法条条文</span><b>${s.n_provisions.toLocaleString()}</b></div>
+      <div class="stat-row"><span>裁判案例</span><b>${s.n_cases.toLocaleString()}</b></div>
+      <div class="stat-row"><span>规范法名</span><b>${(s.n_laws||0).toLocaleString()}</b></div>
+      <div class="stat-row"><span>覆盖法规数</span><b>${(s.n_law_titles||0).toLocaleString()} 部</b></div>
+      <div class="stat-row"><span>用户上传</span><b>${s.n_user}</b></div>
+      <div class="stat-row"><span>查询编码器</span><b style="color:${em.available?'var(--ok)':'var(--bad)'}">${em.available?'就绪':'不可用'}</b></div>
+      <div class="stat-row"><span>生成模型</span><b>${esc((s.llm||{}).model||'-')}</b></div>
+      <div class="meta" style="font-size:11.5px;color:var(--ink3);margin-top:8px">库内域分布：法条 ${Object.entries(s.provision_domains||{}).map(([k,v])=>k+' '+v).join(' / ')}</div>
+      ${(s.top_laws||[]).length?`<h3>库内主要法规（按条数 top 12）</h3>
+        ${s.top_laws.map(x=>`<div class="stat-row"><span>${esc(x.law)}</span><b>${x.n}</b></div>`).join('')}`:''}
+      ${em.available?'':`<div class="err" style="margin-top:10px">编码器不可用：${esc(em.error||'')}<br>当前只能做关键词检索，语义检索精度会明显下降。</div>`}
+    `;
+    if(s.n_user) renderUploads();
+  }catch(e){
+    $('chips').innerHTML = '<span class="chip bad">无法连接服务</span>';
+  }
+}
+
+// ==================================================================== 提问
+let running = false;
+
+async function ask(){
+  if(running) return;
+  const q = $('q').value.trim();
+  if(!q){ $('q').focus(); return; }
+  running = true; $('go').disabled = true;
+
+  const c = curConvo();
+  if(c.title === '新对话') c.title = q.slice(0, 22) + (q.length > 22 ? '…' : '');
+  const um = {role:'user', text:q};
+  const am = {role:'assistant', text:'', html:'', ev:null, ver:null, route:null, err:'',
+              errLevel:'', meta:'', analysis:null, topCases:[], stage:'正在检索知识库…'};
+  c.msgs.push(um, am);
+  $('emptyState').style.display = 'none';
+  const box = $('msgs');
+  box.appendChild(msgNode(um));
+  const an = msgNode(am);
+  box.appendChild(an);
+  scrollBottom();
+  renderHist(); updateTurnTag();
+
+  $('q').value = ''; autoGrow();
+  setStage(an, '正在检索知识库…');
+
+  const detailed = $('swDetailed').classList.contains('on');
+  const body = {
+    question: q,
+    domains: $('dom').value ? [$('dom').value] : null,
+    n_provisions: parseInt($('np').value)||8,
+    n_cases: parseInt($('nc').value)||6,
+    history: HIST.length ? HIST : null,
+    detailed: detailed,
+    top_k_cases: parseInt($('ntk').value)||0
+  };
+
+  const ansEl = an.querySelector('.ans');
+  const foot = an.querySelector('.foot');
+  let acc = '', fatal = false;
+
+  try{
+    const res = await fetch('/api/ask_stream', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    if(!res.ok || !res.body){ throw new Error('HTTP ' + res.status); }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      let i;
+      while((i = buf.indexOf('\n\n')) >= 0){
+        const raw = buf.slice(0, i); buf = buf.slice(i+2);
+        if(!raw.trim()) continue;
+        let ev = 'message', dat = '';
+        for(const ln of raw.split('\n')){
+          if(ln.startsWith('event:')) ev = ln.slice(6).trim();
+          else if(ln.startsWith('data:')) dat += ln.slice(5).trim();
+        }
+        let d = {}; try{ d = JSON.parse(dat); }catch(e){}
+        if(ev === 'stage'){
+          setStage(an, d.msg || '');
+        } else if(ev === 'progress'){
+          // 详细模式：只报进度（JSON 正文不直接吐给用户）
+          setStage(an, '正在生成详细分析…（已生成 ' + (d.chars||0) + ' 字）');
+        } else if(ev === 'evidence'){
+          am.ev = d; am.route = d.route; am.meta = metaText(d);
+          am.topCases = d.top_cases || [];
+          setStage(an, detailed ? '正在生成详细分析…' : '正在生成回答…');
+          foot.innerHTML = '';
+          if(am.route) foot.appendChild(routeNode(am.route));
+          foot.appendChild(evidenceNode(d));
+          if(am.topCases.length) foot.appendChild(topCasesNode(am.topCases));
+        } else if(ev === 'analysis'){
+          // 详细模式：结构化 JSON → 分析面板
+          am.analysis = d.analysis;
+          am.raw = d.raw || '';
+          if(!am.analysis){
+            // 解析失败 → 把原文当正文渲染（markdown 兜底），别让回答消失
+            acc = d.raw || acc;
+            ansEl.innerHTML = md(acc);
+            am.err = (am.err ? am.err + '　' : '') +
+                     '详细分析未能结构化解析，已按正文展示';
+            am.errLevel = 'warn';
+            foot.insertAdjacentHTML('beforeend', `<div class="err warn">⚠ ${esc(am.err)}</div>`);
+          } else {
+            foot.appendChild(analysisNode(am.analysis));
+          }
+        } else if(ev === 'delta'){
+          acc += d.t;
+          ansEl.innerHTML = md(acc) + '<span class="cursor"></span>';
+          scrollBottom();
+        } else if(ev === 'verify'){
+          am.ver = d;
+          foot.insertAdjacentHTML('beforeend', verdictNode(d));
+        } else if(ev === 'notice'){
+          am.err = d.text || '已降级'; am.errLevel = 'warn';
+          foot.insertAdjacentHTML('beforeend', `<div class="err warn">⚠ ${esc(am.err)}</div>`);
+        } else if(ev === 'fatal'){
+          am.err = d.error || '出错'; am.errLevel = 'error';
+          foot.insertAdjacentHTML('beforeend', `<div class="err">${esc(am.err)}</div>`);
+          fatal = true;
+        }
+      }
+    }
+  }catch(e){
+    am.err = '请求失败：' + e.message; am.errLevel = 'error';
+    foot.insertAdjacentHTML('beforeend', `<div class="err">${esc(am.err)}</div>`);
+  }
+
+  setStage(an, '');
+  if(detailed && am.analysis){
+    // 详细模式：正文区放一句摘要，分析内容在下方面板里
+    ansEl.innerHTML = '<div class="asum" style="margin-top:0">'
+      + '<span class="lb">结论</span>' + esc(am.analysis.conclusion || am.analysis.case_summary || '')
+      + '</div>';
+  } else {
+    ansEl.innerHTML = acc ? md(acc)
+      : '<span style="color:var(--ink3)">（本轮没有生成文本，请查看右侧运行状态）</span>';
+  }
+  // 多轮上下文用**可读文本**，不要把 JSON 原文塞进去（会污染下一轮检索）
+  const histText = (detailed && am.analysis)
+    ? [am.analysis.case_summary, am.analysis.conclusion].filter(Boolean).join('\n')
+    : acc;
+  am.text = histText; am.html = ansEl.innerHTML; am.stage = '';
+  // 回答在上，证据/核验在下（ChatGPT 的展开式证据块）
+  foot.innerHTML = '';
+  if(am.route) foot.appendChild(routeNode(am.route));
+  if(am.err) foot.insertAdjacentHTML('beforeend',
+    `<div class="err ${am.errLevel==='warn'?'warn':''}">${esc(am.err)}</div>`);
+  if(am.analysis) foot.appendChild(analysisNode(am.analysis));
+  if(am.ev) foot.appendChild(evidenceNode(am.ev));
+  if(am.topCases && am.topCases.length) foot.appendChild(topCasesNode(am.topCases));
+  if(am.ver) foot.insertAdjacentHTML('beforeend', verdictNode(am.ver));
+  if(am.meta) foot.insertAdjacentHTML('beforeend', `<div class="meta">${esc(am.meta)}</div>`);
+  if(histText && !fatal){
+    HIST.push({role:'user', content:q}, {role:'assistant', content:histText});
+    HIST = HIST.slice(-4);
+  }
+  running = false; $('go').disabled = false;
+  updateTurnTag();
+  loadStats();
+}
+
+function metaText(d){
+  const t = d.timing || {};
+  return `检索 ${t.total_ms} ms（编码 ${t.embed_ms} ms / 向量 ${t.vector_ms} ms / 排序 ${t.rank_ms} ms）· 模式 ${d.mode}`;
+}
+
+function routeNode(rt){
+  if(!rt || rt.error || !rt.label) return document.createComment('no-route');
+  const el = document.createElement('div');
+  el.className = 'routebar';
+  const probs = Object.entries(rt.probs || {})
+    .map(([k, v]) => k + ' ' + (v * 100).toFixed(1) + '%').join(' · ');
+  el.innerHTML = '<span class="rt">L1 法域路由 →</span><b>' + esc(rt.domain_cn) + '</b>'
+    + '<span class="tag">置信 ' + (rt.confidence * 100).toFixed(1) + '%</span>'
+    + (rt.fallback
+        ? '<span class="tag warn">回退（' + (rt.fallback_reason === 'cross_domain' ? '跨域' : '低置信') + '）→ 通用</span>'
+        : '<span class="tag ok">单域 → 检索偏向' + esc(rt.domain_cn) + '域</span>')
+    + '<span class="meta" style="margin-left:auto">' + esc(probs)
+    + (rt.ms != null ? ' · ' + rt.ms + ' ms' : '') + '</span>';
+  return el;
+}
+
+function evItem(it, kind){
+  const isProv = kind === 'p';
+  const isUser = it._idx < 0;
+  const law = isProv ? (it.law || '') : (it.title || '');
+  const label = isProv ? (it.label || '') : (it.law || '');
+  const dom = it.domain || '';
+  const body = isProv ? (it.text || '') : (it.fact || it.text || '');
+  const tail = (!isProv && it.answer) ? `<div class="txt" style="color:#6b7686">参考结论：${esc(it.answer)}</div>` : '';
+  return `<div class="ev ${isUser?'mine':(isProv?'':'case')}">
+    <div class="hd">
+      <span class="law">${esc(law)}${label?' '+esc(label):''}</span>
+      <span class="tag ${esc(dom)}">${({civil:'民事',criminal:'刑事',procedural:'程序',general:'通用'})[dom]||dom||'—'}</span>
+      ${it.task?`<span class="tag">${esc(it.task)}</span>`:''}
+      ${isUser?`<span class="tag">自建</span>`:''}
+      ${it.status?`<span class="tag">${esc(it.status)}</span>`:''}
+      <span class="sc">cos ${it._cos} · 词面 ${it._lex}${it._boost?` · 锚定 +${it._boost}`:''} → ${it._score}</span>
+    </div>
+    <div class="txt">${esc(body) || '<i>（无正文）</i>'}</div>${tail}
+  </div>`;
+}
+
+function evidenceNode(d){
+  const ps = d.provisions || [], cs = d.cases || [], us = d.user || [];
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <details class="evd">
+      <summary>检索证据 · 法条 ${ps.length} · 案例 ${cs.length}${us.length?` · 自建 ${us.length}`:''}</summary>
+      <div class="evwrap">
+        <div style="font-size:12px;color:var(--ink3);margin:2px 0 8px">法条材料</div>
+        ${ps.length ? ps.map(x=>evItem(x,'p')).join('')
+                    : '<div class="empty">未命中法条（可能问题不属于法律问答，或编码器降级）</div>'}
+        <div style="font-size:12px;color:var(--ink3);margin:12px 0 8px">相似案例</div>
+        ${cs.length ? cs.map(x=>evItem(x,'c')).join('') : '<div class="empty">未命中相似案例</div>'}
+        ${us.length ? `<div style="font-size:12px;color:var(--ink3);margin:12px 0 8px">命中的自建知识</div>
+          ${us.map(x=>evItem(x,'c')).join('')}` : ''}
+      </div>
+    </details>`;
+  return wrap;
+}
+
+function verdictNode(v){
+  const okN = (v.found||[]).length, oN=(v.out_of_ctx||[]).length,
+        mN=(v.missing||[]).length, uN=(v.law_unresolved||[]).length;
+  const parts = [];
+  if(v.n_citations === 0){
+    parts.push('<span class="v gray">本回答未引用具体法条</span>');
+  } else {
+    if(okN) parts.push(`<span class="v ok">落实 ${okN}</span>`);
+    if(oN)  parts.push(`<span class="v warn">出上下文 ${oN}</span>`);
+    if(mN)  parts.push(`<span class="v bad">疑似编造 ${mN}</span>`);
+    if(uN)  parts.push(`<span class="v gray">法名未解析 ${uN}</span>`);
+  }
+  if(v.verdict === 'suspect'){
+    parts.push('<span class="v bad">⚠ 核验未通过</span>');
+  } else if(v.n_citations){
+    parts.push('<span class="v ok">✓ 引用可溯源</span>');
+  }
+  let detail = '';
+  const fmt = a => a.map(x=>`《${esc(x.law)}》${x.article?('第'+esc(x.article)+'条'):''}`).join('、');
+  if(okN) detail += `<div><b>落实</b>（确在本次材料中）：${fmt(v.found)}</div>`;
+  if(oN)  detail += `<div><b>出上下文</b>（库里有，但没喂给模型）：${fmt(v.out_of_ctx)}</div>`;
+  if(mN)  detail += `<div><b>疑似编造</b>（全库都找不到，需人工复核）：${fmt(v.missing)}</div>`;
+  if(uN)  detail += `<div><b>法名未解析</b>：${v.law_unresolved.map(x=>esc(x.law)).join('、')}</div>`;
+  return `<div class="verdict">${parts.join('')}</div>`
+       + (detail?`<div class="vdetail">${detail}</div>`:'');
+}
+
+// ==================================================================== 详细分析面板
+// 把后端解析好的 JSON 渲染成「事实 → 争点 → 要件 → 结论」的可读面板。
+// 字段缺失一律不渲染该块（不显示空标题），模型漏字段也不会让面板破相。
+function analysisNode(a){
+  const el = document.createElement('div');
+  el.className = 'analysis';
+  if(!a || (!a.issues && !a.conclusion && !a.case_summary)){
+    // 解析失败 → 兜底展示原始正文，绝不白屏
+    el.innerHTML = '<div class="ahead"><b>详细分析</b></div>'
+      + '<div class="abody"><div class="araw" id="arawBox">（模型未返回可解析的结构化分析）</div></div>';
+    return el;
+  }
+  const nIssue = (a.issues || []).length;
+  const nElem  = (a.issues || []).reduce((n,i) => n + ((i.elements||[]).length), 0);
+  let h = '<div class="ahead"><b>详细分析</b>'
+        + '<span class="tag">事实 · 争点 · 要件 · 结论</span>'
+        + '<span class="n">' + nIssue + ' 个争点 / ' + nElem + ' 个要件</span></div>'
+        + '<div class="abody">';
+
+  if(a.case_summary){
+    h += `<div class="asum"><span class="lb">案情概要</span>${esc(a.case_summary)}</div>`;
+  }
+  if((a.facts||[]).length){
+    h += `<div class="ablock"><div class="ahead2">已确认的事实</div><ul class="alist">`
+       + a.facts.map(x=>`<li>${esc(x)}</li>`).join('') + '</ul></div>';
+  }
+  if((a.unknowns||[]).length){
+    h += `<div class="ablock"><div class="ahead2">待确认的事实</div><ul class="alist">`
+       + a.unknowns.map(x=>`<li>${esc(x)}</li>`).join('') + '</ul></div>';
+  }
+  if(nIssue){
+    h += `<div class="ablock"><div class="ahead2">法律争点与要件拆解</div>`;
+    a.issues.forEach((it, i) => {
+      h += `<div class="issue">
+        <div class="ititle"><span>争点 ${i+1}</span><span>${esc(it.title||'')}</span></div>`;
+      if(it.answer) h += `<div class="ians">${esc(it.answer)}</div>`;
+      (it.elements||[]).forEach(e => {
+        const st = statusClass(e.status);
+        h += `<div class="elem">
+          <div class="erow">
+            <span class="ename">${esc(e.element||'')}</span>
+            ${e.basis ? `<span class="ebasis">${esc(e.basis)}</span>` : ''}
+            ${e.status ? `<span class="estatus ${st}">${esc(e.status)}</span>` : ''}
+          </div>
+          ${e.reasoning ? `<div class="ereason">${esc(e.reasoning)}</div>` : ''}
+        </div>`;
+      });
+      if(it.counter) h += `<div class="icounter"><b>对方可能主张 / 反驳：</b>${esc(it.counter)}</div>`;
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+  if((a.evidence||[]).length){
+    h += `<div class="ablock"><div class="ahead2">证据与举证要点</div><ul class="alist">`
+       + a.evidence.map(x=>`<li>${esc(x)}</li>`).join('') + '</ul></div>';
+  }
+  if(a.conclusion){
+    h += `<div class="ablock"><div class="ahead2">结论</div>`
+       + `<div class="aconcl">${esc(a.conclusion)}</div></div>`;
+  }
+  if(a.uncertainty){
+    h += `<div class="ablock"><div class="ahead2">结论的边界</div>`
+       + `<div class="aunc">${esc(a.uncertainty)}</div></div>`;
+  }
+  h += '</div>';
+  el.innerHTML = h;
+  return el;
+}
+function statusClass(s){
+  s = String(s||'').trim();
+  if(/成立|满足|符合|可以|有权/.test(s) && !/不成立|未成立/.test(s)) return 'ok';
+  if(/不成立|不满足|不符合|无权|不能|无/.test(s)) return 'bad';
+  if(/待确认|存疑|需证据|可能|取决于/.test(s)) return 'warn';
+  return '';
+}
+
+// ==================================================================== Top-K 参考判例（折叠）
+function topCasesNode(list){
+  const el = document.createElement('details');
+  el.className = 'topcases';
+  const n = (list||[]).length;
+  el.innerHTML = `<summary>参考判例 · Top ${n}</summary><div class="tcbody">`
+    + (n ? list.map(c => `
+        <div class="tc">
+          <div class="tchd">
+            <span class="tcno">${c.rank}</span>
+            <span class="tctitle">${esc(c.title||'')}</span>
+            <span class="tag ${esc(c.domain||'general')}">${({civil:'民事',criminal:'刑事',procedural:'程序',general:'通用'})[c.domain]||'库内'}</span>
+            ${c.task ? `<span class="tag">${esc(c.task)}</span>` : ''}
+            ${c.score != null ? `<span class="tcsc">${esc(c.score)}</span>` : ''}
+          </div>
+          <div class="tcfact">${esc(c.fact||'')}</div>
+          ${c.answer ? `<div class="tcans"><b>参考结论：</b>${esc(c.answer)}</div>` : ''}
+        </div>`).join('')
+       : '<div class="empty">本次未命中可参考的相似案例</div>')
+    + '</div>';
+  return el;
+}
+
+// ==================================================================== 输入框
+function autoGrow(){
+  const t = $('q');
+  t.style.height = 'auto';
+  t.style.height = Math.min(t.scrollHeight, 190) + 'px';
+}
+$('q').addEventListener('input', autoGrow);
+$('q').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ask(); }
+});
+$('go').onclick = ask;
+
+// 详细分析开关
+$('swDetailed').onclick = () => {
+  const sw = $('swDetailed');
+  sw.classList.toggle('on');
+  const on = sw.classList.contains('on');
+  sw.querySelector('.swtext').textContent = on ? '详细分析 · 开' : '详细分析';
+  sw.title = on
+    ? '当前：输出结构化详细分析（事实 → 争点 → 要件 → 结论）'
+    : '开启后输出结构化详细分析（事实 → 争点 → 要件 → 结论）';
+};
+
+// ==================================================================== 示例问题（保留 4 条）
+const EX = [
+  {t:'网购商品运输途中损坏', d:'卖家说风险已转移，我还能要求赔偿吗？',
+   q:'网购的商品在运输途中损坏，卖家说风险已转移，我还能要求赔偿吗？'},
+  {t:'竞业限制违约金', d:'员工离职后去了竞品公司，原单位能要求违约金吗？',
+   q:'员工离职后违反竞业限制协议去了竞品公司，原单位能要求违约金吗？'},
+  {t:'伤情鉴定的证据效力', d:'被人打伤后自去做伤情鉴定，刑事程序里算数吗？',
+   q:'被人打伤后自己去做了伤情鉴定，这个鉴定在刑事程序里算数吗？'},
+  {t:'房东随意扣押金', d:'租房到期后房东以墙面污渍为由扣光押金，合理吗？',
+   q:'租房到期后房东以墙面有污渍为由扣光押金，合理吗？'}
+];
+$('exCards').innerHTML = EX.map((x,i)=>
+  `<div class="ex-card" data-i="${i}"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div>`).join('');
+[...$('exCards').querySelectorAll('.ex-card')].forEach(el => el.onclick = () => {
+  $('q').value = EX[+el.dataset.i].q; autoGrow(); $('q').focus();
+});
+
+// ==================================================================== 随机抽题
+$('rnd').onclick = async () => {
+  $('rnd').disabled = true;
+  try{
+    const r = await jget('/api/random_case' + ($('dom').value ? '?domain=' + $('dom').value : ''));
+    if(!r.ok){ alert('抽题失败：' + (r.error||'')); return; }
+    $('q').value = '请分析以下案件的法律定性与裁判要点：' + r.fact;
+    autoGrow(); $('q').focus();
+  } finally { $('rnd').disabled = false; }
+};
+
+// ==================================================================== 侧栏 / 抽屉 / 弹窗
+$('sideToggle').onclick = () => $('side').classList.toggle('collapsed');
+$('menuBtn').onclick = () => {
+  const s = $('side');
+  if(window.innerWidth <= 860){ s.classList.toggle('show'); }
+  else s.classList.toggle('collapsed');
+};
+$('newChat').onclick = () => { newConvo(); if(window.innerWidth <= 860) $('side').classList.remove('show'); };
+$('clr').onclick = newConvo;
+$('histSearch').addEventListener('input', renderHist);
+
+function openDrawer(){ $('drawer').classList.add('open'); $('backdrop').style.display='block'; }
+function closeDrawer(){ $('drawer').classList.remove('open'); $('backdrop').style.display='none'; }
+$('btnStatus').onclick = openDrawer;
+$('drawerClose').onclick = closeDrawer;
+$('backdrop').onclick = closeDrawer;
+
+function openKb(){ $('kbModal').classList.add('open'); }
+function closeKb(){ $('kbModal').classList.remove('open'); }
+$('btnUpload').onclick = openKb;
+$('plusBtn').onclick = openKb;
+$('kbClose').onclick = closeKb;
+$('kbModal').addEventListener('click', e => { if(e.target === $('kbModal')) closeKb(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closeKb(); closeDrawer(); } });
+
+// ==================================================================== 上传知识
+$('up').onclick = async () => {
+  const title = $('ut').value.trim(), text = $('ux').value.trim();
+  if(!title || !text){ $('upmsg').textContent = '标题和正文都要填'; return; }
+  $('upmsg').textContent = '正在编码入库…';
+  $('up').disabled = true;
+  const r = await jpost('/api/upload', {
+    title, text, kind: $('uk').value, domain: $('ud').value,
+    law: $('ul').value.trim(), label: $('ub').value.trim()
+  });
+  $('up').disabled = false;
+  if(r.ok){
+    $('upmsg').textContent = r.note;
+    $('ut').value = ''; $('ux').value = ''; $('ul').value = ''; $('ub').value = '';
+    renderUploads(); loadStats();
+  } else {
+    $('upmsg').textContent = '失败：' + (r.error || '未知错误');
+  }
+};
+
+async function renderUploads(){
+  const r = await jget('/api/uploads');
+  const items = r.items || [];
+  $('uplist').innerHTML = items.length ? items.map(it=>`
+    <div class="up-item">
+      <span class="tag ${esc(it.domain||'general')}">${({civil:'民事',criminal:'刑事',procedural:'程序',general:'通用'})[it.domain]||'通用'}</span>
+      <span class="t" title="${esc(it.title)}">${esc(it.title)}</span>
+      <span class="tag">${{case:'案例',statute:'法条',note:'笔记'}[it.kind]||it.kind}</span>
+      ${it._vec?'<span class="tag" style="color:var(--ok)">向量</span>':'<span class="tag">词面</span>'}
+      <span class="x" data-i="${it._i}">删除</span>
+    </div>`).join('') : '<div class="empty">还没有上传内容</div>';
+  [...$('uplist').querySelectorAll('.x')].forEach(el => el.onclick = async () => {
+    await fetch('/api/uploads/' + el.dataset.i, {method:'DELETE'});
+    renderUploads(); loadStats();
+  });
+}
+
+// ==================================================================== 启动
+newConvo();
+loadStats();
+</script>
+</body>
+</html>

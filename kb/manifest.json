@@ -1,0 +1,37 @@
+{
+  "built_at": "2026-09-26T11:22:02",
+  "dim": 1024,
+  "normalized": true,
+  "dtype": "float16",
+  "n_provisions": 72440,
+  "n_cases": 145339,
+  "n_total": 217779,
+  "order": "provisions.jsonl 全部，后接 cases.jsonl 全部；与 vectors.f16.npy 行序一一对应",
+  "case_collections": [
+    "case_embedding_general",
+    "case_embedding_civil",
+    "case_embedding_criminal",
+    "case_embedding_procedural"
+  ],
+  "provision_collection": "provision_embedding",
+  "embedding_model": "Qwen3-Embedding-0.6B",
+  "embedding_note": "文档侧不加前缀；查询侧需加 'Instruct: <task>\\nQuery: <q>'",
+  "text_missing": {
+    "provisions": 0,
+    "cases": 0
+  },
+  "files": {
+    "provisions.jsonl": {
+      "bytes": 49006098,
+      "md5": "3f2739f16bfc137476d32161ac92bcbf"
+    },
+    "cases.jsonl": {
+      "bytes": 334483061,
+      "md5": "dfe76dcca4941939d20c33dc0642cf60"
+    },
+    "vectors.f16.npy": {
+      "bytes": 446011520,
+      "md5": "5a35760c45d428ae84b3c5860c3e9487"
+    }
+  }
+}

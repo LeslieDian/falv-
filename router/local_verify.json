@@ -1,0 +1,12 @@
+{
+  "n": 24,
+  "threshold": 0.6,
+  "sampling": "stratified sample=24 seed=42",
+  "top1_acc": 0.75,
+  "system_acc": 0.7917,
+  "fallback_rate": 0.3333,
+  "cross_domain_rate": 0.0,
+  "low_conf_rate": 0.3333,
+  "ref_server_top1_acc": 0.837,
+  "encoded_sec": 73.9
+}

@@ -1,0 +1,4 @@
+kb/vectors.f16.npy filter=lfs diff=lfs merge=lfs -text
+kb/cases.jsonl filter=lfs diff=lfs merge=lfs -text
+kb/provisions.jsonl filter=lfs diff=lfs merge=lfs -text
+models/Qwen3-Embedding-0.6B/model.safetensors filter=lfs diff=lfs merge=lfs -text

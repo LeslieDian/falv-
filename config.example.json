@@ -1,0 +1,33 @@
+{
+  "_说明": "生成层配置模板。复制成 config.json 后填入自己的 key；检索层不依赖这里，不填 key 也能演示（只出检索证据）。",
+  "_常见填法": [
+    "DeepSeek  : base_url=https://api.deepseek.com/v1        model=deepseek-chat",
+    "智谱 GLM  : base_url=https://open.bigmodel.cn/api/paas/v4  model=glm-4-plus",
+    "阿里通义  : base_url=https://dashscope.aliyuncs.com/compatible-mode/v1  model=qwen-plus",
+    "月之暗面  : base_url=https://api.moonshot.cn/v1         model=moonshot-v1-8k",
+    "任意中转  : 填服务商给的 OpenAI 兼容地址即可"
+  ],
+  "llm": {
+    "base_url": "https://api.deepseek.com/v1",
+    "api_key": "",
+    "model": "deepseek-chat",
+    "temperature": 0.3,
+    "max_tokens": 16384,
+    "timeout": 300,
+    "reasoning_split": true
+  },
+  "retrieval": {
+    "n_provisions": 8,
+    "n_cases": 6,
+    "pool": 400
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8760
+  },
+  "embedding": {
+    "model_dir": "",
+    "device": "cpu",
+    "batch_size": 16
+  }
+}
