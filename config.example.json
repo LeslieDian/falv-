@@ -12,9 +12,10 @@
     "api_key": "",
     "model": "deepseek-chat",
     "temperature": 0.3,
-    "max_tokens": 16384,
-    "timeout": 300,
-    "reasoning_split": true
+    "max_tokens": 8192,
+    "timeout": 180,
+    "reasoning_split": true,
+    "fast_mode": false
   },
   "retrieval": {
     "n_provisions": 8,
