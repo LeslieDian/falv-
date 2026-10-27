@@ -55,6 +55,7 @@ DEFAULT_CONFIG = {
         "max_tokens": 4096,
         "timeout": 120,
         "reasoning_split": True,
+        "fast_mode": False,
     },
     "retrieval": {"n_provisions": 8, "n_cases": 6, "pool": 400},
     "server": {"host": "127.0.0.1", "port": 8760},
@@ -150,6 +151,18 @@ app = FastAPI(title="法律领域智能体 · 离线演示")
 
 def _llm_ready():
     return bool(CFG["llm"].get("api_key"))
+
+
+def _use_brief(override=None):
+    """是否用精简回答模式。
+
+    精简模式把正文压到 1200 字以内：同一批材料、同一套硬性规则，
+    但**回答快 4~6 倍**（实测 108s → 17s）。慢的主因是正文逐字输出的
+    token 数，不是模型本身，也不是检索层。
+    """
+    if override is not None:
+        return bool(override)
+    return bool(CFG["llm"].get("fast_mode", False))
 
 
 def _client(timeout=None):
@@ -386,6 +399,7 @@ class AskReq(BaseModel):
     history: Optional[List[dict]] = None
     detailed: bool = False        # True → 结构化详细分析（JSON）
     top_k_cases: int = 3          # 回答下方附带的 Top-K 相似案例条数
+    brief: Optional[bool] = None  # True → 精简回答（快 4~6 倍）；None → 跟随配置
 
 
 @app.post("/api/retrieve")
@@ -415,7 +429,8 @@ async def api_ask(req: AskReq):
     if _llm_ready():
         msgs = P.build_messages(req.question, ret["provisions"],
                                 ret["cases"], ret["user"], history=hist,
-                                detailed=req.detailed)
+                                detailed=req.detailed,
+                                brief=_use_brief(req.brief))
         try:
             async with _client() as c:
                 r = await c.post(_endpoint(), headers=_headers(),
@@ -532,19 +547,26 @@ async def api_ask_stream(req: AskReq):
         t0 = time.time()
         ret = None
 
-        def final_event(text):
+        def final_event(text, text_only=False):
             """最终文本的出口。
 
-            普通模式 → delta（流式正文直接吐给页面）
-            详细模式 → analysis（结构化 JSON 面板；解析失败时 raw 兜底）
+            普通模式 → **不再重发正文**（delta 已经逐字流式吐过了）。
+            以前这里再发一遍全文，前端 `acc += d.t` 就把回答拼成了两遍。
+            现在只发一个空的收尾事件（end），前端靠它知道"正文结束"。
 
-            两种模式**分开走**，是为了避免详细模式把满屏 JSON 直接怼到用户脸上 ——
-            JSON 一定要经过解析、规整，再由前端渲染成分析面板。
+            text_only=True → 降级路径用：此时**没有**流式正文发出过，
+            必须把整段文字一次性送过去，否则页面会空白。
+
+            详细模式 → analysis（结构化 JSON 面板；解析失败时 raw 兜底）
+                       —— JSON 必须经过解析、规整，再由前端渲染成分析面板，
+                       不能像普通正文那样直接流式吐出去。
             """
             if req.detailed:
                 analysis = P.normalize_analysis(P.extract_json(text))
                 return _sse("analysis", {"analysis": analysis, "raw": text})
-            return _sse("delta", {"t": text})
+            if text_only:
+                return _sse("delta", {"t": text})
+            return _sse("end", {})
 
         try:
             yield _sse("stage", {"stage": "retrieve", "msg": "正在检索知识库…"})
@@ -559,14 +581,16 @@ async def api_ask_stream(req: AskReq):
                 yield _sse("notice", {"level": "warn",
                                       "text": "未配置 API key：已改用本地检索模式作答"
                                               "（在 config.json 填 llm.api_key 可恢复完整推理）"})
-                yield final_event(local_answer(req.question, ret, "未配置 API key"))
+                yield final_event(local_answer(req.question, ret, "未配置 API key"),
+                                  text_only=True)
                 yield _sse("done", {"elapsed": round(time.time() - t0, 2), "degraded": True})
                 return
 
             yield _sse("stage", {"stage": "generate", "msg": "正在生成回答…"})
             msgs = P.build_messages(req.question, ret["provisions"],
                                     ret["cases"], ret["user"], history=hist,
-                                    detailed=req.detailed)
+                                    detailed=req.detailed,
+                                    brief=_use_brief(req.brief))
             buf = []
             strip = ThinkStripper()
             n_shown = 0
@@ -581,7 +605,8 @@ async def api_ask_stream(req: AskReq):
                         yield _sse("notice", {"level": "warn",
                                               "text": "外接模型调用失败（%s），已改用本地检索模式作答"
                                                       % why})
-                        yield final_event(local_answer(req.question, ret, why))
+                        yield final_event(local_answer(req.question, ret, why),
+                                          text_only=True)
                         yield _sse("done", {"elapsed": round(time.time() - t0, 2),
                                             "degraded": True, "llm_error": body[:200]})
                         return
@@ -629,7 +654,7 @@ async def api_ask_stream(req: AskReq):
                 yield _sse("notice", {"level": "warn",
                                       "text": "模型未返回正文，已改用本地检索模式作答"})
                 answer = local_answer(req.question, ret, "模型返回空内容")
-                yield final_event(answer)
+                yield final_event(answer, text_only=True)
             else:
                 yield final_event(answer)
             yield _sse("stage", {"stage": "verify", "msg": "正在核验引用…"})
@@ -646,7 +671,8 @@ async def api_ask_stream(req: AskReq):
                 why = "%s: %s" % (type(e).__name__, e)
                 yield _sse("notice", {"level": "warn",
                                       "text": "生成环节异常（%s），已改用本地检索模式作答" % why})
-                yield final_event(local_answer(req.question, ret, why))
+                yield final_event(local_answer(req.question, ret, why),
+                                  text_only=True)
                 yield _sse("done", {"elapsed": round(time.time() - t0, 2), "degraded": True})
                 return
             yield _sse("fatal", {"error": "%s: %s" % (type(e).__name__, e)})

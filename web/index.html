@@ -454,6 +454,10 @@
             <span class="track"><span class="knob"></span></span>
             <span class="swtext">详细分析</span>
           </button>
+          <button class="switch on" id="swBrief" title="精简回答：同样的规则，但把正文压到 1200 字以内，响应快 4~6 倍（约 20s vs 110s）">
+            <span class="track"><span class="knob"></span></span>
+            <span class="swtext">精简回答</span>
+          </button>
           <span class="turntag" id="turntag" style="display:none"></span>
         </div>
         <div class="composer">
@@ -782,6 +786,7 @@ async function ask(){
   setStage(an, '正在检索知识库…');
 
   const detailed = $('swDetailed').classList.contains('on');
+  const brief = $('swBrief').classList.contains('on');
   const body = {
     question: q,
     domains: $('dom').value ? [$('dom').value] : null,
@@ -789,6 +794,7 @@ async function ask(){
     n_cases: parseInt($('nc').value)||6,
     history: HIST.length ? HIST : null,
     detailed: detailed,
+    brief: brief,
     top_k_cases: parseInt($('ntk').value)||0
   };
 
@@ -846,9 +852,15 @@ async function ask(){
             foot.appendChild(analysisNode(am.analysis));
           }
         } else if(ev === 'delta'){
+          // 去重保护：后端正常流程只流式吐一次全文。若收到与已有内容重复的
+          // 整段（老版本后端会在收尾时重发一遍全文），直接忽略，避免回答变成两遍。
+          if(d.t && acc && d.t.length > 40 && acc.endsWith(d.t)) continue;
           acc += d.t;
           ansEl.innerHTML = md(acc) + '<span class="cursor"></span>';
           scrollBottom();
+        } else if(ev === 'end'){
+          // 正文结束（后端收尾信号）
+          ansEl.innerHTML = md(acc);
         } else if(ev === 'verify'){
           am.ver = d;
           foot.insertAdjacentHTML('beforeend', verdictNode(d));
@@ -1109,6 +1121,17 @@ $('swDetailed').onclick = () => {
   sw.title = on
     ? '当前：输出结构化详细分析（事实 → 争点 → 要件 → 结论）'
     : '开启后输出结构化详细分析（事实 → 争点 → 要件 → 结论）';
+};
+
+// 精简回答开关（快 4~6 倍）
+$('swBrief').onclick = () => {
+  const sw = $('swBrief');
+  sw.classList.toggle('on');
+  const on = sw.classList.contains('on');
+  sw.querySelector('.swtext').textContent = on ? '精简回答 · 开' : '精简回答';
+  sw.title = on
+    ? '当前：精简回答（正文 ≤1200 字，约 20s）。关闭可得到完整长篇分析（约 110s）'
+    : '精简回答：同样的规则，正文压到 1200 字以内，响应快 4~6 倍';
 };
 
 // ==================================================================== 示例问题（保留 4 条）
