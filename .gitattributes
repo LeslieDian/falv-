@@ -1,3 +1,31 @@
+# ============================================================================
+# 换行符规则：让「在哪台机器上克隆」得到完全一样的结果。
+# 背景：Windows 的 core.autocrlf=true 曾把 tokenizer.json 撑大 11MB→12MB、
+#       merges.txt 撑大 1.67MB→1.82MB，分词器字节与权重不一致 → 编码器加载异常。
+#       本仓库的 .gitattributes 是「后匹配的行优先」，所以通用规则写在最前面，
+#       LFS 规则写在最后 —— LFS 规则里的 -text 会把通用规则的 text 覆盖掉。
+# ============================================================================
+
+# 批处理：cmd.exe 读 .bat 依赖 CRLF，尤其 deploy.bat 用了 goto :标签，
+# LF-only 时标签跳转可能失效 → 强制 CRLF
+*.bat text eol=crlf
+
+# 脚本 / 文本：统一 LF，避免跨平台 diff 噪声
+*.py  text eol=lf
+*.md  text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.txt text eol=lf
+
+# 二进制：禁止任何换行/合并转换
+*.npy binary
+*.pkl binary
+*.safetensors binary
+
+# ============================================================================
+# 以下 LFS 规则必须放在最后 —— LFS 文件必须是逐字节一致的二进制，
+# 绝对不能被 CRLF 转换改坏（-text = 关闭换行转换）。
+# ============================================================================
 kb/vectors.f16.npy filter=lfs diff=lfs merge=lfs -text
 kb/cases.jsonl filter=lfs diff=lfs merge=lfs -text
 kb/provisions.jsonl filter=lfs diff=lfs merge=lfs -text
