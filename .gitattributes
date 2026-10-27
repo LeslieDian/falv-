@@ -1,4 +1,10 @@
 kb/vectors.f16.npy filter=lfs diff=lfs merge=lfs -text
 kb/cases.jsonl filter=lfs diff=lfs merge=lfs -text
 kb/provisions.jsonl filter=lfs diff=lfs merge=lfs -text
-models/Qwen3-Embedding-0.6B/model.safetensors filter=lfs diff=lfs merge=lfs -text
+
+# 编码器权重与分词器：必须逐字节一致，不能被 CRLF 转换改坏 → 全部走 LFS（二进制）
+models/Qwen3-Embedding-0.6B/** filter=lfs diff=lfs merge=lfs -text
+models/Qwen3-Embedding-0.6B/* filter=lfs diff=lfs merge=lfs -text
+
+# 路由器的训练集 / 校验集同理（JSONL，逐行文本，换行被改会影响哈希）
+router/*.jsonl filter=lfs diff=lfs merge=lfs -text
